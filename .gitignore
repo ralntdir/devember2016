@@ -27,3 +27,9 @@
 *.exe
 *.out
 *.app
+
+# Build folder
+build/
+
+# Vim swap files
+*.swp
