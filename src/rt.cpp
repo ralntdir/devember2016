@@ -2,8 +2,14 @@
 // Think how to clean SDL if the programs ends with some crash
 // Finished the program if there is a problem at SDL/IMG init or
 // when creating the window or the renderer
+//
+// Features to add:
+// sphere "class"
+// ray "class"
+// ray->sphere intersection
 
 #include <iostream>
+#include <fstream>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -52,23 +58,27 @@ int main(int argc, char* argv[])
   }
 
   // Create a .ppm file 
-  std::cout << "P3\n";
-  std::cout << "# image.ppm\n";
-  std::cout << WIDTH << " " << HEIGHT << "\n";
-  std::cout << MAX_COLOR << "\n";
+  std::ofstream ofs("image.ppm", std::ofstream::out | std::ofstream::binary);
+
+  ofs << "P3\n";
+  ofs << "# image.ppm\n";
+  ofs << WIDTH << " " << HEIGHT << "\n";
+  ofs << MAX_COLOR << "\n";
   
   // NOTE(ralntdir): From top to bottom
   for (int i = HEIGHT; i > 0 ; i--)
   {
     for (int j = 0; j < WIDTH; j++)
     {
-      int r = 0;
-      int g = (255.00*i/HEIGHT);
+      int g = 0;
+      int r = (255.00*i/HEIGHT);
       int b = (255.00*j/WIDTH);
 
-      std::cout << r << " " << g << " " << b << "\n";
+      ofs << r << " " << g << " " << b << "\n";
     }
   }
+
+  ofs.close();
 
   // Load the image
   // TODO(ralntdir): right now I'm loading the image from the previous
