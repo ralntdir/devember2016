@@ -14,10 +14,95 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
+// NOTE(ralntdir): For number types
+#include <stdint.h>
+
+typedef int32_t int32;
+
+typedef float real32;
+typedef double real64;
+
 // TODO(ralntdir): read this from a scene file?
 #define WIDTH 400
 #define HEIGHT 200
 #define MAX_COLOR 255
+
+struct vec3
+{
+  real32 x;
+  real32 y;
+  real32 z;
+};
+
+struct ray
+{
+  vec3 origin;
+  vec3 direction;
+};
+
+struct sphere
+{
+  vec3 center;
+  real32 radius;
+};
+
+real32 dotProduct(vec3 vector1, vec3 vector2)
+{
+  real32 result;
+
+  result = vector1.x * vector2.x + vector1.y * vector2.y + vector1.z * vector2.z;
+
+  return(result);
+}
+
+bool hitSphere(sphere mySphere, ray myRay, real32 *t)
+{
+  bool result = false;
+
+  real32 a = dotProduct(myRay.direction, myRay.direction);
+  real32 b = 2 * dotProduct(myRay.origin, myRay.direction);
+  real32 c = dotProduct(myRay.origin, myRay.origin) - mySphere.radius*mySphere.radius;
+
+  real32 discriminant = 4*a*c;
+
+  if (discriminant < 0)
+  {
+    return(result);
+  }
+  else
+  {
+    real32 root1 = (-b + sqrt(discriminant))/2*a;
+    if (discriminant > 0)
+    {
+      real32 root2 = (-b - sqrt(discriminant))/2*a;
+
+      if ((root1 > 0) && (root2 > 0) && (root1 < root2))
+      {
+        *t = root1;
+        result = true;
+        return(result);
+      }
+      else if ((root1 < 0) && (root2 > 0) && (root1 < root2))
+      {
+        *t = root2;
+        result = true;
+        return(result);
+      }
+      else
+      {
+        return(result);
+      }
+    }
+    else
+    {
+      *t = root1;
+      result = true;
+      return(result);
+    }
+  }
+
+  return(result);
+}
 
 int main(int argc, char* argv[])
 {
@@ -70,8 +155,8 @@ int main(int argc, char* argv[])
   {
     for (int j = 0; j < WIDTH; j++)
     {
-      int g = 0;
-      int r = (255.00*i/HEIGHT);
+      int r = 0;
+      int g = (255.00*i/HEIGHT);
       int b = (255.00*j/WIDTH);
 
       ofs << r << " " << g << " " << b << "\n";
