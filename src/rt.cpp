@@ -4,9 +4,9 @@
 // when creating the window or the renderer
 //
 // Features to add:
-// sphere "class"
-// ray "class"
 // ray->sphere intersection
+// ray creation
+// handle sdl events to be able to close the window whenever I want
 
 #include <iostream>
 #include <fstream>
@@ -27,12 +27,7 @@ typedef double real64;
 #define HEIGHT 200
 #define MAX_COLOR 255
 
-struct vec3
-{
-  real32 x;
-  real32 y;
-  real32 z;
-};
+#include "myMath.h"
 
 struct ray
 {
@@ -44,26 +39,20 @@ struct sphere
 {
   vec3 center;
   real32 radius;
+  vec3 color;
 };
-
-real32 dotProduct(vec3 vector1, vec3 vector2)
-{
-  real32 result;
-
-  result = vector1.x * vector2.x + vector1.y * vector2.y + vector1.z * vector2.z;
-
-  return(result);
-}
 
 bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 {
   bool result = false;
 
-  real32 a = dotProduct(myRay.direction, myRay.direction);
-  real32 b = 2 * dotProduct(myRay.origin, myRay.direction);
-  real32 c = dotProduct(myRay.origin, myRay.origin) - mySphere.radius*mySphere.radius;
+  vec3 originCenter = myRay.origin - mySphere.center;
 
-  real32 discriminant = 4*a*c;
+  real32 a = dotProduct(myRay.direction, myRay.direction);
+  real32 b = 2 * dotProduct(originCenter, myRay.direction);
+  real32 c = dotProduct(originCenter, originCenter) - mySphere.radius*mySphere.radius;
+
+  real32 discriminant = b*b - 4*a*c;
 
   if (discriminant < 0)
   {
@@ -71,10 +60,11 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
   }
   else
   {
-    real32 root1 = (-b + sqrt(discriminant))/2*a;
+    result = true;
+    /*real32 root1 = (-b + sqrt(discriminant))/(2*a);
     if (discriminant > 0)
     {
-      real32 root2 = (-b - sqrt(discriminant))/2*a;
+      real32 root2 = (-b - sqrt(discriminant))/(2*a);
 
       if ((root1 > 0) && (root2 > 0) && (root1 < root2))
       {
@@ -98,7 +88,21 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
       *t = root1;
       result = true;
       return(result);
-    }
+    }*/
+  }
+
+  return(result);
+}
+
+vec3 color(ray myRay, sphere mySphere, vec3 backgroundColor)
+{
+  vec3 result = backgroundColor;
+
+  real32 t;
+
+  if (hitSphere(mySphere, myRay, &t))
+  {
+    result = mySphere.color;
   }
 
   return(result);
@@ -149,15 +153,35 @@ int main(int argc, char* argv[])
   ofs << "# image.ppm\n";
   ofs << WIDTH << " " << HEIGHT << "\n";
   ofs << MAX_COLOR << "\n";
+
+  vec3 horizontalOffset = { 4.0, 0.0, 0.0 };
+  vec3 verticalOffset = { 0.0, 2.0, 0.0 };
+  vec3 lowerLeftCorner = { -2.0, -1.0, -1.0 };
+
+  sphere mySphere =  {};
+  mySphere.center = { 0.0, 0.0, -1.0 };
+  mySphere.radius = 0.5;
+  mySphere.color = { 0.9, 0.9, 0.9 };
   
   // NOTE(ralntdir): From top to bottom
-  for (int i = HEIGHT; i > 0 ; i--)
+  for (int32 i = HEIGHT-1; i >= 0 ; i--)
   {
-    for (int j = 0; j < WIDTH; j++)
+    for (int32 j = 0; j < WIDTH; j++)
     {
-      int r = 0;
-      int g = (255.00*i/HEIGHT);
-      int b = (255.00*j/WIDTH);
+      real32 u = real32(j)/real32(WIDTH);
+      real32 v = real32(i)/real32(HEIGHT);
+      ray cameraRay = {};
+      cameraRay.origin = { 0.0, 0.0, 0.0 };
+      cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
+      // printVector(cameraRay.origin);
+      // printVector(cameraRay.direction);
+
+      vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
+      vec3 col = color(cameraRay, mySphere, backgroundColor);
+
+      int32 r = (255.0*col.e[0]);
+      int32 g = (255.0*col.e[1]);
+      int32 b = (255.0*col.e[2]);
 
       ofs << r << " " << g << " " << b << "\n";
     }
@@ -166,8 +190,6 @@ int main(int argc, char* argv[])
   ofs.close();
 
   // Load the image
-  // TODO(ralntdir): right now I'm loading the image from the previous
-  // execution!!!! Change this!!!!!
   surface = IMG_Load("image.ppm");
   if (surface == 0)
   {
