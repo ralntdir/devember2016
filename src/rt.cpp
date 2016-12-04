@@ -5,8 +5,6 @@
 //
 // Features to add:
 // ray->sphere intersection
-// ray creation
-// handle sdl events to be able to close the window whenever I want
 
 #include <iostream>
 #include <fstream>
@@ -203,10 +201,31 @@ int main(int argc, char* argv[])
   }
   SDL_FreeSurface(surface);
 
-  // Show the texture
-  SDL_RenderCopy(renderer, texture, 0, 0);
-  SDL_RenderPresent(renderer);
-  SDL_Delay(5000);
+  SDL_Event event;
+
+  bool running = true;
+
+  while (running)
+  {
+    while (SDL_PollEvent(&event))
+    {
+      if (event.type == SDL_QUIT)
+      {
+        running = false;
+      }
+      else if (event.type == SDL_KEYDOWN)
+      {
+        if (event.key.keysym.sym == SDLK_ESCAPE)
+        {
+          running = false;
+        }
+      }
+    }
+
+    // Show the texture
+    SDL_RenderCopy(renderer, texture, 0, 0);
+    SDL_RenderPresent(renderer);
+  }
 
   // Free the texture
   SDL_DestroyTexture(texture);
