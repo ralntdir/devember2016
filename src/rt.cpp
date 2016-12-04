@@ -5,6 +5,11 @@
 //
 // Features to add:
 // ray->sphere intersection
+//   -phong shading
+//      *N vector (normal at hit point)
+//      *L vector (lightPosition - hitPoint)
+//      *R vector (reflection of L -> 2(L·N)N - L)
+//      *V vector (camera - hitPoint)
 
 #include <iostream>
 #include <fstream>
@@ -37,7 +42,20 @@ struct sphere
 {
   vec3 center;
   real32 radius;
-  vec3 color;
+  vec3 diffuseColor;
+};
+
+struct light
+{
+  vec3 position;
+  vec3 iSpecular;
+  vec3 iDiffuse;
+};
+
+struct scene
+{
+  light lights[1];
+  sphere spheres[1];
 };
 
 bool hitSphere(sphere mySphere, ray myRay, real32 *t)
@@ -59,51 +77,74 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
   else
   {
     result = true;
-    /*real32 root1 = (-b + sqrt(discriminant))/(2*a);
-    if (discriminant > 0)
-    {
-      real32 root2 = (-b - sqrt(discriminant))/(2*a);
 
-      if ((root1 > 0) && (root2 > 0) && (root1 < root2))
-      {
-        *t = root1;
-        result = true;
-        return(result);
-      }
-      else if ((root1 < 0) && (root2 > 0) && (root1 < root2))
-      {
-        *t = root2;
-        result = true;
-        return(result);
-      }
-      else
-      {
-        return(result);
-      }
-    }
-    else
+    real32 root1 = (-b + sqrt(discriminant))/(2*a);
+    real32 root2 = (-b - sqrt(discriminant))/(2*a);
+
+    if ((root1 < root2) && (root1 > 0.0))
     {
       *t = root1;
-      result = true;
-      return(result);
-    }*/
+    }
+    else if ((root2 < root1) && (root2 > 0.0))
+    {
+      *t = root2;
+    }
+    else if ((root1 < 0) && (root2 < 0))
+    {
+      result = false;
+    }
   }
 
   return(result);
 }
 
-vec3 color(ray myRay, sphere mySphere, vec3 backgroundColor)
+// TODO(ralntdir): Implement real phong shading here!
+vec3 phongShading(light myLight, sphere mySphere)
+{
+  vec3 result;
+
+  result = mySphere.diffuseColor;
+
+  return result;
+}
+
+vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
   vec3 result = backgroundColor;
 
-  real32 t;
+  real32 t = -1.0;
 
-  if (hitSphere(mySphere, myRay, &t))
+  if (hitSphere(myScene->spheres[0], myRay, &t))
   {
-    result = mySphere.color;
+    if (t != 1.0)
+    {
+      result = phongShading(myScene->lights[0], myScene->spheres[0]);
+    }
   }
 
   return(result);
+}
+
+void initializeLight(light *myLight)
+{
+  myLight->position = { 0.0, 5.0, -1.0 };
+  myLight->iSpecular = { 0.0, 0.0, 0.0 };
+  myLight->iDiffuse = { 0.0, 0.0, 0.0 };
+}
+
+void initializeScene(scene *myScene)
+{
+  sphere mySphere =  {};
+  mySphere.center = { 0.0, 0.0, -1.0 };
+  mySphere.radius = 0.5;
+  mySphere.diffuseColor = { 0.5, 0.5, 0.5 };
+
+  myScene->spheres[0] = mySphere;
+
+  light myLight;
+  initializeLight(&myLight);
+
+  myScene->lights[0] = myLight;
 }
 
 int main(int argc, char* argv[])
@@ -156,10 +197,8 @@ int main(int argc, char* argv[])
   vec3 verticalOffset = { 0.0, 2.0, 0.0 };
   vec3 lowerLeftCorner = { -2.0, -1.0, -1.0 };
 
-  sphere mySphere =  {};
-  mySphere.center = { 0.0, 0.0, -1.0 };
-  mySphere.radius = 0.5;
-  mySphere.color = { 0.9, 0.9, 0.9 };
+  scene myScene = {};
+  initializeScene(&myScene);
   
   // NOTE(ralntdir): From top to bottom
   for (int32 i = HEIGHT-1; i >= 0 ; i--)
@@ -175,7 +214,7 @@ int main(int argc, char* argv[])
       // printVector(cameraRay.direction);
 
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
-      vec3 col = color(cameraRay, mySphere, backgroundColor);
+      vec3 col = color(cameraRay, &myScene, backgroundColor);
 
       int32 r = (255.0*col.e[0]);
       int32 g = (255.0*col.e[1]);
