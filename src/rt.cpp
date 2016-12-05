@@ -30,6 +30,7 @@ typedef double real64;
 #define HEIGHT 200
 #define MAX_COLOR 255
 
+#include <math.h>
 #include "myMath.h"
 
 struct ray
@@ -42,14 +43,18 @@ struct sphere
 {
   vec3 center;
   real32 radius;
-  vec3 diffuseColor;
+
+  vec3 ka;
+  vec3 kd;
+  vec3 ks;
 };
 
 struct light
 {
   vec3 position;
-  vec3 iSpecular;
+  vec3 iAmbient;
   vec3 iDiffuse;
+  vec3 iSpecular;
 };
 
 struct scene
@@ -99,13 +104,19 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 }
 
 // TODO(ralntdir): Implement real phong shading here!
-vec3 phongShading(light myLight, sphere mySphere)
+vec3 phongShading(light myLight, sphere mySphere, vec3 hitPoint)
 {
   vec3 result;
 
-  result = mySphere.diffuseColor;
+  // *N vector (normal at hit point)
+  // *L vector (lightPosition - hitPoint)
+  vec3 N = normalize(hitPoint - mySphere.center);
+  vec3 L = normalize(myLight.position - hitPoint);
 
-  return result;
+  result = mySphere.ka*myLight.iAmbient +
+           mySphere.kd*myLight.iDiffuse*dotProduct(L, N);
+
+  return(result);
 }
 
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
@@ -118,7 +129,8 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
   {
     if (t != 1.0)
     {
-      result = phongShading(myScene->lights[0], myScene->spheres[0]);
+      vec3 hitPoint = myRay.origin + t*myRay.direction;
+      result = phongShading(myScene->lights[0], myScene->spheres[0], hitPoint);
     }
   }
 
@@ -128,8 +140,9 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 void initializeLight(light *myLight)
 {
   myLight->position = { 0.0, 5.0, -1.0 };
+  myLight->iAmbient = { 0.7, 0.7, 0.7 };
+  myLight->iDiffuse = { 1.0, 1.0, 1.0 };
   myLight->iSpecular = { 0.0, 0.0, 0.0 };
-  myLight->iDiffuse = { 0.0, 0.0, 0.0 };
 }
 
 void initializeScene(scene *myScene)
@@ -137,7 +150,10 @@ void initializeScene(scene *myScene)
   sphere mySphere =  {};
   mySphere.center = { 0.0, 0.0, -1.0 };
   mySphere.radius = 0.5;
-  mySphere.diffuseColor = { 0.5, 0.5, 0.5 };
+
+  mySphere.ka = { 0.1, 0.1, 0.2 };
+  mySphere.kd = { 0.5, 0.5, 0.5 };
+  mySphere.ks = { 0.5, 0.5, 0.5 };
 
   myScene->spheres[0] = mySphere;
 
@@ -210,11 +226,10 @@ int main(int argc, char* argv[])
       ray cameraRay = {};
       cameraRay.origin = { 0.0, 0.0, 0.0 };
       cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
-      // printVector(cameraRay.origin);
-      // printVector(cameraRay.direction);
 
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
       vec3 col = color(cameraRay, &myScene, backgroundColor);
+      clamp(&col);
 
       int32 r = (255.0*col.e[0]);
       int32 g = (255.0*col.e[1]);
