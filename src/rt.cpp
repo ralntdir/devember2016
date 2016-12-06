@@ -6,10 +6,7 @@
 // Features to add:
 // ray->sphere intersection
 //   -phong shading
-//      *N vector (normal at hit point)
-//      *L vector (lightPosition - hitPoint)
-//      *R vector (reflection of L -> 2(L·N)N - L)
-//      *V vector (camera - hitPoint)
+//      *Add diffuse component if dotProduct >= 0.0
 
 #include <iostream>
 #include <fstream>
