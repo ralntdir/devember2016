@@ -92,16 +92,16 @@ real32 clamp(real32 value)
 {
   real32 result = value;
 
-  if (value < 0.0)
+  if (result < 0.0)
   {
-    value = 0.0;
+    result = 0.0;
   }
-  else if (value > 1.0)
+  else if (result > 1.0)
   {
-    value = 1.0;
+    result = 1.0;
   }
 
-  return result;
+  return(result);
 }
 
 void clamp(vec3 *vector)

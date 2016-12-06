@@ -47,6 +47,8 @@ struct sphere
   vec3 ka;
   vec3 kd;
   vec3 ks;
+
+  real32 alpha;
 };
 
 struct light
@@ -62,6 +64,9 @@ struct scene
   light lights[1];
   sphere spheres[1];
 };
+
+// TODO(ralntdir): Think if I should add this to the scene
+vec3 camera = { 0.0, 0.0, 0.0 };
 
 bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 {
@@ -113,8 +118,14 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 hitPoint)
   vec3 N = normalize(hitPoint - mySphere.center);
   vec3 L = normalize(myLight.position - hitPoint);
 
+  // *R vector (reflection of L -> 2(L·N)N - L)
+  // *V vector (camera - hitPoint)
+  vec3 R = normalize(2*dotProduct(L, N)*N - L);
+  vec3 V = normalize(camera - hitPoint);
+
   result = mySphere.ka*myLight.iAmbient +
-           mySphere.kd*myLight.iDiffuse*dotProduct(L, N);
+           mySphere.kd*myLight.iDiffuse*dotProduct(L, N) +
+           mySphere.ks*myLight.iSpecular*pow(dotProduct(R, V), mySphere.alpha);
 
   return(result);
 }
@@ -139,10 +150,10 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 
 void initializeLight(light *myLight)
 {
-  myLight->position = { 0.0, 5.0, -1.0 };
+  myLight->position = { 2.0, 5.0, 1.0 };
   myLight->iAmbient = { 0.7, 0.7, 0.7 };
   myLight->iDiffuse = { 1.0, 1.0, 1.0 };
-  myLight->iSpecular = { 0.0, 0.0, 0.0 };
+  myLight->iSpecular = { 0.5, 0.5, 0.5 };
 }
 
 void initializeScene(scene *myScene)
@@ -154,6 +165,8 @@ void initializeScene(scene *myScene)
   mySphere.ka = { 0.1, 0.1, 0.2 };
   mySphere.kd = { 0.5, 0.5, 0.5 };
   mySphere.ks = { 0.5, 0.5, 0.5 };
+
+  mySphere.alpha = 100.0;
 
   myScene->spheres[0] = mySphere;
 
@@ -229,11 +242,13 @@ int main(int argc, char* argv[])
 
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
       vec3 col = color(cameraRay, &myScene, backgroundColor);
+      //std::cout << "COL\n";
+      //printVector(col);
       clamp(&col);
 
-      int32 r = (255.0*col.e[0]);
-      int32 g = (255.0*col.e[1]);
-      int32 b = (255.0*col.e[2]);
+      int32 r = int32(255.0*col.e[0]);
+      int32 g = int32(255.0*col.e[1]);
+      int32 b = int32(255.0*col.e[2]);
 
       ofs << r << " " << g << " " << b << "\n";
     }
