@@ -27,7 +27,7 @@ typedef double real64;
 
 // TODO(ralntdir): read this from a scene file?
 #define WIDTH 400
-#define HEIGHT 200
+#define HEIGHT 400
 #define MAX_COLOR 255
 
 #include <math.h>
@@ -125,23 +125,28 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 hitPoint)
 
   result = mySphere.ka*myLight.iAmbient +
            mySphere.kd*myLight.iDiffuse*dotProduct(L, N) +
-           mySphere.ks*myLight.iSpecular*pow(dotProduct(R, V), mySphere.alpha);
+           mySphere.ks*myLight.iSpecular*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
 
   return(result);
 }
 
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
-  vec3 result = backgroundColor;
+  // vec3 result = backgroundColor;
+  vec3 result = { 0.0, 0.0, 0.0 };
 
   real32 t = -1.0;
 
   if (hitSphere(myScene->spheres[0], myRay, &t))
   {
-    if (t != 1.0)
+    if (t >= 0.0)
     {
+#if 1
       vec3 hitPoint = myRay.origin + t*myRay.direction;
       result = phongShading(myScene->lights[0], myScene->spheres[0], hitPoint);
+#else
+      result = myScene->spheres[0].kd;
+#endif
     }
   }
 
@@ -150,21 +155,32 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 
 void initializeLight(light *myLight)
 {
-  myLight->position = { 2.0, 5.0, 1.0 };
-  myLight->iAmbient = { 0.7, 0.7, 0.7 };
+  myLight->position = { -0.57735027, 0.57735027, -0.57735027 };
+  //myLight->position = { 2.0, 5.0, 1.0 };
+  //myLight->iAmbient = { 0.7, 0.7, 0.7 };
+  myLight->iAmbient = { 1.0, 1.0, 1.0 };
   myLight->iDiffuse = { 1.0, 1.0, 1.0 };
-  myLight->iSpecular = { 0.5, 0.5, 0.5 };
+  //myLight->iSpecular = { 0.5, 0.5, 0.5 };
+  myLight->iSpecular = { 1.0, 1.0, 1.0 };
 }
 
 void initializeScene(scene *myScene)
 {
   sphere mySphere =  {};
+#if 1
+  mySphere.center = { 0.0, 0.0, -2.0 };
+  mySphere.radius = 1.0;
+#else
   mySphere.center = { 0.0, 0.0, -1.0 };
   mySphere.radius = 0.5;
+#endif
 
-  mySphere.ka = { 0.1, 0.1, 0.2 };
-  mySphere.kd = { 0.5, 0.5, 0.5 };
-  mySphere.ks = { 0.5, 0.5, 0.5 };
+  mySphere.ka = { 0.1, 0.1, 0.1 };
+  //mySphere.ka = { 0.1, 0.1, 0.2 };
+  mySphere.kd = { 1.0, 0.0, 0.0 };
+  // mySphere.kd = { 0.5, 0.5, 0.5 };
+  mySphere.ks = { 1.0, 1.0, 1.0 };
+  //mySphere.ks = { 0.5, 0.5, 0.5 };
 
   mySphere.alpha = 100.0;
 
@@ -222,9 +238,14 @@ int main(int argc, char* argv[])
   ofs << WIDTH << " " << HEIGHT << "\n";
   ofs << MAX_COLOR << "\n";
 
-  vec3 horizontalOffset = { 4.0, 0.0, 0.0 };
+  // vec3 horizontalOffset = { 4.0, 0.0, 0.0 };
+  // vec3 verticalOffset = { 0.0, 2.0, 0.0 };
+  // vec3 lowerLeftCorner = { -2.0, -1.0, -1.0 };
+
+  vec3 horizontalOffset = { 2.0, 0.0, 0.0 };
   vec3 verticalOffset = { 0.0, 2.0, 0.0 };
-  vec3 lowerLeftCorner = { -2.0, -1.0, -1.0 };
+  vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
+  // vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
 
   scene myScene = {};
   initializeScene(&myScene);
@@ -242,8 +263,6 @@ int main(int argc, char* argv[])
 
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
       vec3 col = color(cameraRay, &myScene, backgroundColor);
-      //std::cout << "COL\n";
-      //printVector(col);
       clamp(&col);
 
       int32 r = int32(255.0*col.e[0]);

@@ -4,4 +4,5 @@ My Devember project!
 
 Goals:
 
+[X] Add one sphere
 [] Add spheres

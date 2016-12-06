@@ -129,4 +129,16 @@ vec3 normalize(vec3 vector)
   return(result);
 }
 
+real32 max(real32 a, real32 b)
+{
+  real32 result = b;
+
+  if (a > b)
+  {
+    result = a;
+  }
+
+  return(result);
+}
+
 #endif
