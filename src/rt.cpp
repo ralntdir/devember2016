@@ -19,6 +19,9 @@
 // NOTE(ralntdir): For number types
 #include <stdint.h>
 
+// NOTE(ralntdir): For FLT_MAX
+#include <float.h>
+
 typedef int32_t int32;
 
 typedef float real32;
@@ -62,13 +65,13 @@ struct scene
 {
   vec3 camera;
 
-  int32 maxSpheres = 1;
+  int32 maxSpheres = 8;
   int32 maxLights = 1;
 
   int32 numSpheres;
   int32 numLights;
   light lights[1];
-  sphere spheres[1];
+  sphere spheres[8];
 };
 
 bool hitSphere(sphere mySphere, ray myRay, real32 *t)
@@ -141,59 +144,24 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
   vec3 result = backgroundColor;
   // vec3 result = { 0.0, 0.0, 0.0 };
 
+  real32 maxt = FLT_MAX;
   real32 t = -1.0;
 
-  if (hitSphere(myScene->spheres[0], myRay, &t))
+  for (int i = 0; i < myScene->numSpheres; i++)
   {
-    if (t >= 0.0)
+    sphere mySphere = myScene->spheres[i];
+    if (hitSphere(mySphere, myRay, &t))
     {
-      vec3 hitPoint = myRay.origin + t*myRay.direction;
-      result = phongShading(myScene->lights[0], myScene->spheres[0], myScene->camera, hitPoint);
+      if ((t >= 0.0) && (t < maxt))
+      {
+        maxt = t;
+        vec3 hitPoint = myRay.origin + t*myRay.direction;
+        result = phongShading(myScene->lights[0], mySphere, myScene->camera, hitPoint);
+      }
     }
   }
 
   return(result);
-}
-
-void initializeLight(light *myLight)
-{
-  //myLight->position = { 2.0, 5.0, 1.0 };
-  //myLight->iAmbient = { 0.7, 0.7, 0.7 };
-  //myLight->iSpecular = { 0.5, 0.5, 0.5 };
-  myLight->position = { -0.57735027, 0.57735027, -0.57735027 };
-  myLight->iAmbient = { 1.0, 1.0, 1.0 };
-  myLight->iDiffuse = { 1.0, 1.0, 1.0 };
-  myLight->iSpecular = { 1.0, 1.0, 1.0 };
-}
-
-void initializeScene(scene *myScene)
-{
-  sphere mySphere =  {};
-#if 1
-  mySphere.center = { 0.0, 0.0, -2.0 };
-  mySphere.radius = 1.0;
-#else
-  mySphere.center = { 0.0, 0.0, -1.0 };
-  mySphere.radius = 0.5;
-#endif
-
-  // NOTE(ralntdir): Old scene, move it to a sceneFile
-  // mySphere.ka = { 0.1, 0.1, 0.2 };
-  // mySphere.kd = { 0.5, 0.5, 0.5 };
-  // mySphere.ks = { 0.5, 0.5, 0.5 };
-
-  mySphere.ka = { 0.1, 0.1, 0.1 };
-  mySphere.kd = { 1.0, 0.0, 0.0 };
-  mySphere.ks = { 1.0, 1.0, 1.0 };
-
-  mySphere.alpha = 100.0;
-
-  //myScene->spheres[0] = mySphere;
-
-  //light myLight;
-  //initializeLight(&myLight);
-
-  //myScene->lights[0] = myLight;
 }
 
 void readSceneFile(scene *myScene, char *filename)
@@ -293,6 +261,13 @@ int main(int argc, char* argv[])
   SDL_Surface *surface;
   SDL_Texture *texture;
 
+  if (argc != 2)
+  {
+    std::cout << "Missing scene file. Usage: ./program sceneFile\n";
+    return(1);
+  }
+  char *sceneFileName = argv[1];
+
   // Init SDL
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
   {
@@ -326,9 +301,9 @@ int main(int argc, char* argv[])
 
   scene myScene = {};
   // Read scene file
-  readSceneFile(&myScene, "../scenes/redSphere.txt");
+  readSceneFile(&myScene, sceneFileName);
 
-  initializeScene(&myScene);
+  // initializeScene(&myScene);
 
   // Create a .ppm file 
   std::ofstream ofs("image.ppm", std::ofstream::out | std::ofstream::binary);

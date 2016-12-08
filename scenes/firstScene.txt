@@ -1,0 +1,27 @@
+#Comment
+camera
+0.0 0.0 0.0
+
+sphere
+center
+0.0 0.0 -1.0
+radius
+0.5
+ka
+0.1 0.1 0.2
+kd
+0.5 0.5 0.5 
+ks
+0.5 0.5 0.5 
+alpha
+100.0
+
+light
+position
+2.0 5.0 1.0 
+ambient
+0.7 0.7 0.7 
+diffuse
+1.0 1.0 1.0 
+specular
+0.5 0.5 0.5 

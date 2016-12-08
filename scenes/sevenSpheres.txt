@@ -1,0 +1,125 @@
+#Comment
+camera
+0.0 0.0 0.0
+
+sphere
+center
+-4.0 0.0 -4.0
+radius
+1.0
+ka
+0.1 0.1 0.1
+kd
+1.0 0.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+-1.25 0.0 -2.0
+radius
+0.5
+ka
+0.1 0.1 0.1
+kd
+1.0 0.0 0.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+-1.0 0.0 -4.0
+radius
+1.0
+ka
+0.1 0.1 0.1
+kd
+1.0 1.0 0.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+0.0 0.0 -2.0
+radius
+0.5
+ka
+0.1 0.1 0.1
+kd
+0.0 1.0 0.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+1.0 0.0 -4.0
+radius
+1.0
+ka
+0.1 0.1 0.1
+kd
+0.0 1.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+1.25 0.0 -2.0
+radius
+0.5
+ka
+0.1 0.1 0.1
+kd
+0.0 0.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+4.0 0.0 -4.0
+radius
+1.0
+ka
+0.1 0.1 0.1
+kd
+1.0 0.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+sphere
+center
+0.0 -11.0 -14.0
+radius
+14.0
+ka
+0.1 0.1 0.1
+kd
+1.0 1.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
+light
+position
+-0.57735027 0.57735027 -0.57735027 
+ambient
+1.0 1.0 1.0 
+diffuse
+1.0 1.0 1.0 
+specular
+1.0 1.0 1.0 
