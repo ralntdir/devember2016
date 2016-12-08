@@ -4,12 +4,14 @@
 // when creating the window or the renderer
 //
 // Features to add:
-// ray->sphere intersection
-//   -phong shading
-//      *Add diffuse component if dotProduct >= 0.0
+// ray->sphere intersection (check if it's completed)
+// shadows
+// reflection
 
+// Files manipulation
 #include <iostream>
 #include <fstream>
+#include <string>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -58,12 +60,16 @@ struct light
 
 struct scene
 {
+  vec3 camera;
+
+  int32 maxSpheres = 1;
+  int32 maxLights = 1;
+
+  int32 numSpheres;
+  int32 numLights;
   light lights[1];
   sphere spheres[1];
 };
-
-// TODO(ralntdir): Think if I should add this to the scene
-vec3 camera = { 0.0, 0.0, 0.0 };
 
 bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 {
@@ -105,8 +111,7 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
   return(result);
 }
 
-// TODO(ralntdir): Implement real phong shading here!
-vec3 phongShading(light myLight, sphere mySphere, vec3 hitPoint)
+vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
 {
   vec3 result;
 
@@ -114,23 +119,27 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 hitPoint)
   // *L vector (lightPosition - hitPoint)
   vec3 N = normalize(hitPoint - mySphere.center);
   vec3 L = normalize(myLight.position - hitPoint);
+  real32 dotProductLN = max(dotProduct(L, N), 0.0);
+  real32 filterSpecular = dotProductLN > 0.0 ? 1.0 : 0.0;
 
   // *R vector (reflection of L -> 2(L·N)N - L)
   // *V vector (camera - hitPoint)
   vec3 R = normalize(2*dotProduct(L, N)*N - L);
   vec3 V = normalize(camera - hitPoint);
 
+  // Only add specular component if you have diffuse,
+  // if dotProductLN > 0.0
   result = mySphere.ka*myLight.iAmbient +
-           mySphere.kd*myLight.iDiffuse*dotProduct(L, N) +
-           mySphere.ks*myLight.iSpecular*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+           mySphere.kd*myLight.iDiffuse*dotProductLN +
+           filterSpecular*mySphere.ks*myLight.iSpecular*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
 
   return(result);
 }
 
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
-  // vec3 result = backgroundColor;
-  vec3 result = { 0.0, 0.0, 0.0 };
+  vec3 result = backgroundColor;
+  // vec3 result = { 0.0, 0.0, 0.0 };
 
   real32 t = -1.0;
 
@@ -138,12 +147,8 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
   {
     if (t >= 0.0)
     {
-#if 1
       vec3 hitPoint = myRay.origin + t*myRay.direction;
-      result = phongShading(myScene->lights[0], myScene->spheres[0], hitPoint);
-#else
-      result = myScene->spheres[0].kd;
-#endif
+      result = phongShading(myScene->lights[0], myScene->spheres[0], myScene->camera, hitPoint);
     }
   }
 
@@ -152,12 +157,12 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 
 void initializeLight(light *myLight)
 {
-  myLight->position = { -0.57735027, 0.57735027, -0.57735027 };
   //myLight->position = { 2.0, 5.0, 1.0 };
   //myLight->iAmbient = { 0.7, 0.7, 0.7 };
+  //myLight->iSpecular = { 0.5, 0.5, 0.5 };
+  myLight->position = { -0.57735027, 0.57735027, -0.57735027 };
   myLight->iAmbient = { 1.0, 1.0, 1.0 };
   myLight->iDiffuse = { 1.0, 1.0, 1.0 };
-  //myLight->iSpecular = { 0.5, 0.5, 0.5 };
   myLight->iSpecular = { 1.0, 1.0, 1.0 };
 }
 
@@ -172,21 +177,113 @@ void initializeScene(scene *myScene)
   mySphere.radius = 0.5;
 #endif
 
-  mySphere.ka = { 0.1, 0.1, 0.1 };
-  //mySphere.ka = { 0.1, 0.1, 0.2 };
-  mySphere.kd = { 1.0, 0.0, 0.0 };
+  // NOTE(ralntdir): Old scene, move it to a sceneFile
+  // mySphere.ka = { 0.1, 0.1, 0.2 };
   // mySphere.kd = { 0.5, 0.5, 0.5 };
+  // mySphere.ks = { 0.5, 0.5, 0.5 };
+
+  mySphere.ka = { 0.1, 0.1, 0.1 };
+  mySphere.kd = { 1.0, 0.0, 0.0 };
   mySphere.ks = { 1.0, 1.0, 1.0 };
-  //mySphere.ks = { 0.5, 0.5, 0.5 };
 
   mySphere.alpha = 100.0;
 
-  myScene->spheres[0] = mySphere;
+  //myScene->spheres[0] = mySphere;
 
-  light myLight;
-  initializeLight(&myLight);
+  //light myLight;
+  //initializeLight(&myLight);
 
-  myScene->lights[0] = myLight;
+  //myScene->lights[0] = myLight;
+}
+
+void readSceneFile(scene *myScene, char *filename)
+{
+  std::string line;
+  std::ifstream scene(filename);
+
+  if (scene.is_open())
+  {
+    while (!scene.eof())
+    {
+      scene >> line;
+
+      // If line is not a comment
+      if (line[0] != '#')
+      {
+        std::cout << line << "\n";
+
+        if (line == "camera")
+        {
+          scene >> myScene->camera.x;
+          scene >> myScene->camera.y;
+          scene >> myScene->camera.z;
+        }
+        else if (line == "sphere")
+        {
+          sphere mySphere = {};
+
+          scene >> line; // center
+          scene >> mySphere.center.x;
+          scene >> mySphere.center.y;
+          scene >> mySphere.center.z;
+          scene >> line; // radius
+          scene >> mySphere.radius;
+          scene >> line; // ka
+          scene >> mySphere.ka.x;
+          scene >> mySphere.ka.y;
+          scene >> mySphere.ka.z;
+          scene >> line; // kd
+          scene >> mySphere.kd.x;
+          scene >> mySphere.kd.y;
+          scene >> mySphere.kd.z;
+          scene >> line; // ks
+          scene >> mySphere.ks.x;
+          scene >> mySphere.ks.y;
+          scene >> mySphere.ks.z;
+          scene >> line; // alpha
+          scene >> mySphere.alpha;
+
+          myScene->numSpheres++;
+          if (myScene->numSpheres <= myScene->maxSpheres)
+          {
+            myScene->spheres[myScene->numSpheres-1] = mySphere;
+          }
+        }
+        else if (line == "light")
+        {
+          light myLight = {};
+
+          scene >> line; // position
+          scene >> myLight.position.x;
+          scene >> myLight.position.y;
+          scene >> myLight.position.z;
+          scene >> line; // iAmbient
+          scene >> myLight.iAmbient.x;
+          scene >> myLight.iAmbient.y;
+          scene >> myLight.iAmbient.z;
+          scene >> line; // iDiffuse
+          scene >> myLight.iDiffuse.x;
+          scene >> myLight.iDiffuse.y;
+          scene >> myLight.iDiffuse.z;
+          scene >> line; // iSpecular
+          scene >> myLight.iSpecular.x;
+          scene >> myLight.iSpecular.y;
+          scene >> myLight.iSpecular.z;
+
+          myScene->numLights++;
+          if (myScene->numLights <= myScene->maxLights)
+          {
+            myScene->lights[myScene->numLights-1] = myLight;
+          }
+        }
+      }
+    }
+    scene.close();
+  }
+  else
+  {
+    std::cout << "There was a problem opening the scene file\n";
+  }
 }
 
 int main(int argc, char* argv[])
@@ -227,6 +324,12 @@ int main(int argc, char* argv[])
     std::cout << "Error in SDL_CreateRenderer(): " << SDL_GetError() << "\n";
   }
 
+  scene myScene = {};
+  // Read scene file
+  readSceneFile(&myScene, "../scenes/redSphere.txt");
+
+  initializeScene(&myScene);
+
   // Create a .ppm file 
   std::ofstream ofs("image.ppm", std::ofstream::out | std::ofstream::binary);
 
@@ -244,9 +347,6 @@ int main(int argc, char* argv[])
   vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
   // vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
 
-  scene myScene = {};
-  initializeScene(&myScene);
-  
   // NOTE(ralntdir): From top to bottom
   for (int32 i = HEIGHT-1; i >= 0 ; i--)
   {
@@ -255,7 +355,7 @@ int main(int argc, char* argv[])
       real32 u = real32(j)/real32(WIDTH);
       real32 v = real32(i)/real32(HEIGHT);
       ray cameraRay = {};
-      cameraRay.origin = { 0.0, 0.0, 0.0 };
+      cameraRay.origin = myScene.camera;
       cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
 
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
