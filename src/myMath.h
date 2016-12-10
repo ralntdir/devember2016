@@ -74,6 +74,29 @@ inline vec3 operator*(vec3 b, real32 a)
   return(result);
 }
 
+inline vec3 operator/(vec3 b, real32 a)
+{
+  real32 k = 1.0/a;
+
+  vec3 result = b*k;
+
+  return(result);
+}
+
+inline vec3 operator+=(vec3 &a, vec3 b)
+{
+  a = a + b;
+
+  return(a);
+}
+
+inline vec3 operator/=(vec3 &b, real32 a)
+{
+  b = b/a;
+
+  return(b);
+}
+
 real32 dotProduct(vec3 vector1, vec3 vector2)
 {
   real32 result;

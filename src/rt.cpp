@@ -19,6 +19,9 @@
 // NOTE(ralntdir): For number types
 #include <stdint.h>
 
+// NOTE(ralntdir): For rand
+#include <random>
+
 // NOTE(ralntdir): For FLT_MAX
 #include <float.h>
 
@@ -28,9 +31,10 @@ typedef float real32;
 typedef double real64;
 
 // TODO(ralntdir): read this from a scene file?
-#define WIDTH 400
-#define HEIGHT 400
+#define WIDTH 500
+#define HEIGHT 500
 #define MAX_COLOR 255
+#define MAX_SAMPLES 100
 
 #include <math.h>
 #include "myMath.h"
@@ -141,8 +145,8 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
 
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
-  vec3 result = backgroundColor;
-  // vec3 result = { 0.0, 0.0, 0.0 };
+  // vec3 result = backgroundColor;
+  vec3 result = { 0.0, 0.0, 0.0 };
 
   real32 maxt = FLT_MAX;
   real32 t = -1.0;
@@ -319,23 +323,37 @@ int main(int argc, char* argv[])
 
   vec3 horizontalOffset = { 2.0, 0.0, 0.0 };
   vec3 verticalOffset = { 0.0, 2.0, 0.0 };
-  vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
+  vec3 lowerLeftCorner = { -1.0, -1.0, -3.0 };
   // vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
+
+  // NOTE(ralntdir): generates random unsigned integers
+  std::default_random_engine engine;
+  // NOTE(ralntdir): generates random floats between [0, 1)
+  std::uniform_real_distribution<real32> distribution(0, 1);
 
   // NOTE(ralntdir): From top to bottom
   for (int32 i = HEIGHT-1; i >= 0 ; i--)
   {
     for (int32 j = 0; j < WIDTH; j++)
     {
-      real32 u = real32(j)/real32(WIDTH);
-      real32 v = real32(i)/real32(HEIGHT);
-      ray cameraRay = {};
-      cameraRay.origin = myScene.camera;
-      cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
-
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
-      vec3 col = color(cameraRay, &myScene, backgroundColor);
-      clamp(&col);
+      vec3 col = {};
+
+      for (int32 samples = 0; samples < MAX_SAMPLES; samples++)
+      {
+        real32 u = real32(j + distribution(engine))/real32(WIDTH);
+        real32 v = real32(i + distribution(engine))/real32(HEIGHT);
+
+        ray cameraRay = {};
+        cameraRay.origin = myScene.camera;
+        cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
+
+        vec3 tempCol = color(cameraRay, &myScene, backgroundColor);
+        clamp(&tempCol);
+        col += tempCol;
+      }
+
+      col /= (real32)MAX_SAMPLES;
 
       int32 r = int32(255.0*col.e[0]);
       int32 g = int32(255.0*col.e[1]);
