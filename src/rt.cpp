@@ -35,7 +35,7 @@ typedef double real64;
 #define WIDTH 500
 #define HEIGHT 500
 #define MAX_COLOR 255
-#define MAX_SAMPLES 100
+#define MAX_SAMPLES 50
 
 #include <math.h>
 #include "myMath.h"
@@ -125,7 +125,7 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 }
 
 // TODO(ralntdir): add attenuation for point lights
-vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
+vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, real32 visible)
 {
   vec3 result;
 
@@ -152,16 +152,16 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
   result = mySphere.ka*myLight.intensity +
-           mySphere.kd*myLight.intensity*dotProductLN +
-           filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+           visible*mySphere.kd*myLight.intensity*dotProductLN +
+           visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
 
   return(result);
 }
 
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
-  vec3 result = backgroundColor;
-  // vec3 result = { 0.0, 0.0, 0.0 };
+  // vec3 result = backgroundColor;
+  vec3 result = { 0.0, 0.0, 0.0 };
 
   real32 maxt = FLT_MAX;
   real32 t = -1.0;
@@ -180,7 +180,31 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
         for (int j = 0; j < myScene->numLights; j++)
         {
           light myLight = myScene->lights[j];
-          result += phongShading(myLight, mySphere, myScene->camera, hitPoint);
+
+          ray shadowRay = {};
+
+          vec3 N = normalize(hitPoint - mySphere.center);
+
+          shadowRay.origin = hitPoint + N*0.01;
+          shadowRay.direction = normalize(-myLight.position);
+
+          real32 visible = 1.0;
+
+          for (int k = 0; k < myScene->numSpheres; k++)
+          {
+            if (i != k)
+            {
+              sphere mySphere1 = myScene->spheres[k];
+              real32 t1 = -1.0;
+              if (hitSphere(mySphere1, shadowRay, &t1))
+              {
+                visible = 0.0;
+                break;
+              }
+            }
+          }
+
+          result += phongShading(myLight, mySphere, myScene->camera, hitPoint, visible);
         }
       }
     }
@@ -347,8 +371,8 @@ int main(int argc, char* argv[])
 
   vec3 horizontalOffset = { 2.0, 0.0, 0.0 };
   vec3 verticalOffset = { 0.0, 2.0, 0.0 };
-  // vec3 lowerLeftCorner = { -1.0, -1.0, -3.0 };
-  vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
+  vec3 lowerLeftCorner = { -1.0, -1.0, -3.0 };
+  // vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
 
   // NOTE(ralntdir): generates random unsigned integers
   std::default_random_engine engine;
