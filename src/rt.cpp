@@ -7,6 +7,7 @@
 // ray->sphere intersection (check if it's completed)
 // shadows
 // reflection
+// read llc, hoffset and voffset from file
 
 // Files manipulation
 #include <iostream>
@@ -57,12 +58,17 @@ struct sphere
   real32 alpha;
 };
 
+enum light_type
+{
+  point,
+  directional,
+};
+
 struct light
 {
   vec3 position;
-  vec3 iAmbient;
-  vec3 iDiffuse;
-  vec3 iSpecular;
+  vec3 intensity;
+  light_type type;
 };
 
 struct scene
@@ -70,11 +76,11 @@ struct scene
   vec3 camera;
 
   int32 maxSpheres = 8;
-  int32 maxLights = 1;
+  int32 maxLights = 2;
 
   int32 numSpheres;
   int32 numLights;
-  light lights[1];
+  light lights[2];
   sphere spheres[8];
 };
 
@@ -118,6 +124,7 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
   return(result);
 }
 
+// TODO(ralntdir): add attenuation for point lights
 vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
 {
   vec3 result;
@@ -125,7 +132,15 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
   // *N vector (normal at hit point)
   // *L vector (lightPosition - hitPoint)
   vec3 N = normalize(hitPoint - mySphere.center);
-  vec3 L = normalize(myLight.position - hitPoint);
+  vec3 L = {};
+  if (myLight.type == point)
+  {
+    L = normalize(myLight.position - hitPoint);
+  }
+  else if (myLight.type == directional)
+  {
+    L = normalize(-myLight.position);
+  }
   real32 dotProductLN = max(dotProduct(L, N), 0.0);
   real32 filterSpecular = dotProductLN > 0.0 ? 1.0 : 0.0;
 
@@ -136,17 +151,17 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint)
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  result = mySphere.ka*myLight.iAmbient +
-           mySphere.kd*myLight.iDiffuse*dotProductLN +
-           filterSpecular*mySphere.ks*myLight.iSpecular*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  result = mySphere.ka*myLight.intensity +
+           mySphere.kd*myLight.intensity*dotProductLN +
+           filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
 
   return(result);
 }
 
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
-  // vec3 result = backgroundColor;
-  vec3 result = { 0.0, 0.0, 0.0 };
+  vec3 result = backgroundColor;
+  // vec3 result = { 0.0, 0.0, 0.0 };
 
   real32 maxt = FLT_MAX;
   real32 t = -1.0;
@@ -158,9 +173,15 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
     {
       if ((t >= 0.0) && (t < maxt))
       {
+        result = {};
         maxt = t;
         vec3 hitPoint = myRay.origin + t*myRay.direction;
-        result = phongShading(myScene->lights[0], mySphere, myScene->camera, hitPoint);
+
+        for (int j = 0; j < myScene->numLights; j++)
+        {
+          light myLight = myScene->lights[j];
+          result += phongShading(myLight, mySphere, myScene->camera, hitPoint);
+        }
       }
     }
   }
@@ -229,18 +250,21 @@ void readSceneFile(scene *myScene, char *filename)
           scene >> myLight.position.x;
           scene >> myLight.position.y;
           scene >> myLight.position.z;
-          scene >> line; // iAmbient
-          scene >> myLight.iAmbient.x;
-          scene >> myLight.iAmbient.y;
-          scene >> myLight.iAmbient.z;
-          scene >> line; // iDiffuse
-          scene >> myLight.iDiffuse.x;
-          scene >> myLight.iDiffuse.y;
-          scene >> myLight.iDiffuse.z;
-          scene >> line; // iSpecular
-          scene >> myLight.iSpecular.x;
-          scene >> myLight.iSpecular.y;
-          scene >> myLight.iSpecular.z;
+          scene >> line; // intensity
+          scene >> myLight.intensity.x;
+          scene >> myLight.intensity.y;
+          scene >> myLight.intensity.z;
+          scene >> line; // type
+          scene >> line;
+
+          if (line.compare("point") == 0)
+          {
+            myLight.type = point;
+          }
+          else if (line.compare("directional") == 0)
+          {
+            myLight.type = directional;
+          }
 
           myScene->numLights++;
           if (myScene->numLights <= myScene->maxLights)
@@ -323,8 +347,8 @@ int main(int argc, char* argv[])
 
   vec3 horizontalOffset = { 2.0, 0.0, 0.0 };
   vec3 verticalOffset = { 0.0, 2.0, 0.0 };
-  vec3 lowerLeftCorner = { -1.0, -1.0, -3.0 };
-  // vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
+  // vec3 lowerLeftCorner = { -1.0, -1.0, -3.0 };
+  vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
 
   // NOTE(ralntdir): generates random unsigned integers
   std::default_random_engine engine;

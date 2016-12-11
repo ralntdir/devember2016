@@ -46,14 +46,6 @@ alpha
 
 light
 position
-0.57735027 -0.57735027 -0.57735027
-intensity
-1.0 1.0 1.0 
-type
-directional
-
-light
-position
 0.57735027 0.57735027 -0.57735027 
 intensity
 0.0 0.0 1.0 
