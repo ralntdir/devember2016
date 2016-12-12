@@ -1,6 +1,15 @@
-#Comment
+# Scene for testing the ability to render more than one sphere
 camera
 0.0 0.0 0.0
+
+ul
+-1.0  1.0 -1.0
+ur
+ 1.0  1.0 -1.0
+lr
+ 1.0 -1.0 -1.0
+ll
+-1.0 -1.0 -1.0
 
 sphere
 center

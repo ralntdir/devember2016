@@ -35,7 +35,7 @@ typedef double real64;
 #define WIDTH 500
 #define HEIGHT 500
 #define MAX_COLOR 255
-#define MAX_SAMPLES 50
+#define MAX_SAMPLES 10
 
 #include <math.h>
 #include "myMath.h"
@@ -74,6 +74,10 @@ struct light
 struct scene
 {
   vec3 camera;
+  vec3 ul;
+  vec3 ur;
+  vec3 lr;
+  vec3 ll;
 
   int32 maxSpheres = 8;
   int32 maxLights = 2;
@@ -125,6 +129,7 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 }
 
 // TODO(ralntdir): add attenuation for point lights
+// TODO(ralntdir): technically this is not Phong Shading
 vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, real32 visible)
 {
   vec3 result;
@@ -158,6 +163,27 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, re
   return(result);
 }
 
+ray getShadowRay(light myLight, vec3 hitPoint, vec3 normalAtHitPoint)
+{
+  ray result = {};
+
+  // NOTE(ralntdir): delta to avoid shadow acne.
+  real32 bias = 0.01;
+
+  result.origin = hitPoint + normalAtHitPoint*bias;
+
+  if (myLight.type == directional)
+  {
+    result.direction = normalize(-myLight.position);
+  }
+  else if (myLight.type == point)
+  {
+    result.direction = normalize(myLight.position - hitPoint);
+  }
+
+  return(result);
+}
+
 vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
 {
   // vec3 result = backgroundColor;
@@ -181,12 +207,9 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
         {
           light myLight = myScene->lights[j];
 
-          ray shadowRay = {};
-
           vec3 N = normalize(hitPoint - mySphere.center);
 
-          shadowRay.origin = hitPoint + N*0.01;
-          shadowRay.direction = normalize(-myLight.position);
+          ray shadowRay = getShadowRay(myLight, hitPoint, N);
 
           real32 visible = 1.0;
 
@@ -225,7 +248,12 @@ void readSceneFile(scene *myScene, char *filename)
       scene >> line;
 
       // If line is not a comment
-      if (line[0] != '#')
+      if (line[0] == '#')
+      {
+        std::getline(scene, line);
+        std::cout << line << "\n";
+      }
+      else
       {
         std::cout << line << "\n";
 
@@ -296,6 +324,42 @@ void readSceneFile(scene *myScene, char *filename)
             myScene->lights[myScene->numLights-1] = myLight;
           }
         }
+        else if (line == "ul")
+        {
+          vec3 ul = {};
+          scene >> ul.x;
+          scene >> ul.y;
+          scene >> ul.z;
+
+          myScene->ul = ul;
+        }
+        else if (line == "ur")
+        {
+          vec3 ur = {};
+          scene >> ur.x;
+          scene >> ur.y;
+          scene >> ur.z;
+
+          myScene->ur = ur;
+        }
+        else if (line == "lr")
+        {
+          vec3 lr = {};
+          scene >> lr.x;
+          scene >> lr.y;
+          scene >> lr.z;
+
+          myScene->lr = lr;
+        }
+        else if (line == "ll")
+        {
+          vec3 ll = {};
+          scene >> ll.x;
+          scene >> ll.y;
+          scene >> ll.z;
+
+          myScene->ll = ll;
+        }
       }
     }
     scene.close();
@@ -313,7 +377,7 @@ int main(int argc, char* argv[])
   SDL_Surface *surface;
   SDL_Texture *texture;
 
-  if (argc != 2)
+  if (argc < 2)
   {
     std::cout << "Missing scene file. Usage: ./program sceneFile\n";
     return(1);
@@ -355,8 +419,6 @@ int main(int argc, char* argv[])
   // Read scene file
   readSceneFile(&myScene, sceneFileName);
 
-  // initializeScene(&myScene);
-
   // Create a .ppm file 
   std::ofstream ofs("image.ppm", std::ofstream::out | std::ofstream::binary);
 
@@ -365,14 +427,9 @@ int main(int argc, char* argv[])
   ofs << WIDTH << " " << HEIGHT << "\n";
   ofs << MAX_COLOR << "\n";
 
-  // vec3 horizontalOffset = { 4.0, 0.0, 0.0 };
-  // vec3 verticalOffset = { 0.0, 2.0, 0.0 };
-  // vec3 lowerLeftCorner = { -2.0, -1.0, -1.0 };
-
-  vec3 horizontalOffset = { 2.0, 0.0, 0.0 };
-  vec3 verticalOffset = { 0.0, 2.0, 0.0 };
-  vec3 lowerLeftCorner = { -1.0, -1.0, -3.0 };
-  // vec3 lowerLeftCorner = { -1.0, -1.0, -1.0 };
+  vec3 horizontalOffset = myScene.ur - myScene.ul;
+  vec3 verticalOffset = myScene.ul - myScene.ll;
+  vec3 lowerLeftCorner = myScene.ll;
 
   // NOTE(ralntdir): generates random unsigned integers
   std::default_random_engine engine;

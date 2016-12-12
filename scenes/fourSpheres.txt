@@ -1,4 +1,4 @@
-#Comment
+# Scene for testing shadows in point lights
 camera
 0.0 0.0 0.0
 
@@ -13,9 +13,9 @@ ll
 
 sphere
 center
-0.0 0.0 -2.0
+-1.25 0.0 -2.0
 radius
-1.0
+0.5
 ka
 0.1 0.1 0.1
 kd
@@ -27,9 +27,9 @@ alpha
 
 sphere
 center
-0.0 0.0 -5.0
+0.0 0.0 -2.0
 radius
-3.0
+0.5
 ka
 0.1 0.1 0.1
 kd
@@ -41,9 +41,9 @@ alpha
 
 sphere
 center
-0.0 0.0 -9.0
+1.25 0.0 -2.0
 radius
-6.0
+0.5
 ka
 0.1 0.1 0.1
 kd
@@ -53,9 +53,23 @@ ks
 alpha
 100.0
 
+sphere
+center
+0.0 -8.5 -2.0
+radius
+8.0
+ka
+0.1 0.1 0.1
+kd
+1.0 1.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+100.0
+
 light
 position
--0.57735027 0.57735027 -0.57735027 
+0.0 4.0 0.0 
 intensity
 1.0 1.0 1.0 
 type
