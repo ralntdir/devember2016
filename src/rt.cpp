@@ -35,7 +35,8 @@ typedef double real64;
 #define WIDTH 500
 #define HEIGHT 500
 #define MAX_COLOR 255
-#define MAX_SAMPLES 10
+#define MAX_SAMPLES 100
+#define MAX_DEPTH 5
 
 #include <math.h>
 #include "myMath.h"
@@ -54,6 +55,8 @@ struct sphere
   vec3 ka;
   vec3 kd;
   vec3 ks;
+
+  vec3 kr;
 
   real32 alpha;
 };
@@ -184,55 +187,63 @@ ray getShadowRay(light myLight, vec3 hitPoint, vec3 normalAtHitPoint)
   return(result);
 }
 
-vec3 color(ray myRay, scene *myScene, vec3 backgroundColor)
+vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
 {
   // vec3 result = backgroundColor;
   vec3 result = { 0.0, 0.0, 0.0 };
 
-  real32 maxt = FLT_MAX;
-  real32 t = -1.0;
-
-  for (int i = 0; i < myScene->numSpheres; i++)
+  if (depth <= MAX_DEPTH)
   {
-    sphere mySphere = myScene->spheres[i];
-    if (hitSphere(mySphere, myRay, &t))
-    {
-      if ((t >= 0.0) && (t < maxt))
-      {
-        result = {};
-        maxt = t;
-        vec3 hitPoint = myRay.origin + t*myRay.direction;
+    real32 maxt = FLT_MAX;
+    real32 t = -1.0;
 
-        for (int j = 0; j < myScene->numLights; j++)
+    for (int i = 0; i < myScene->numSpheres; i++)
+    {
+      sphere mySphere = myScene->spheres[i];
+      if (hitSphere(mySphere, myRay, &t))
+      {
+        if ((t >= 0.0) && (t < maxt))
         {
-          light myLight = myScene->lights[j];
+          result = {};
+          maxt = t;
+          vec3 hitPoint = myRay.origin + t*myRay.direction;
 
           vec3 N = normalize(hitPoint - mySphere.center);
 
-          ray shadowRay = getShadowRay(myLight, hitPoint, N);
-
-          real32 visible = 1.0;
-
-          for (int k = 0; k < myScene->numSpheres; k++)
+          for (int j = 0; j < myScene->numLights; j++)
           {
-            if (i != k)
+            light myLight = myScene->lights[j];
+
+            ray shadowRay = getShadowRay(myLight, hitPoint, N);
+
+            real32 visible = 1.0;
+
+            for (int k = 0; k < myScene->numSpheres; k++)
             {
-              sphere mySphere1 = myScene->spheres[k];
-              real32 t1 = -1.0;
-              if (hitSphere(mySphere1, shadowRay, &t1))
+              if (i != k)
               {
-                visible = 0.0;
-                break;
+                sphere mySphere1 = myScene->spheres[k];
+                real32 t1 = -1.0;
+                if (hitSphere(mySphere1, shadowRay, &t1))
+                {
+                  visible = 0.0;
+                  break;
+                }
               }
             }
+            result += phongShading(myLight, mySphere, myScene->camera, hitPoint, visible);
           }
 
-          result += phongShading(myLight, mySphere, myScene->camera, hitPoint, visible);
+          // Add reflection
+          ray reflectedRay = {};
+          reflectedRay.origin = hitPoint + N*0.01;
+          reflectedRay.direction = 2*dotProduct(-myRay.direction, N)*N + myRay.direction;
+
+          result += mySphere.kr*color(reflectedRay, myScene, backgroundColor, depth+1);
         }
       }
     }
   }
-
   return(result);
 }
 
@@ -285,8 +296,19 @@ void readSceneFile(scene *myScene, char *filename)
           scene >> mySphere.ks.x;
           scene >> mySphere.ks.y;
           scene >> mySphere.ks.z;
-          scene >> line; // alpha
-          scene >> mySphere.alpha;
+          scene >> line; // kr || alpha
+          if (line == "kr")
+          {
+            scene >> mySphere.kr.x;
+            scene >> mySphere.kr.y;
+            scene >> mySphere.kr.z;
+            scene >> line; // alpha
+            scene >> mySphere.alpha;
+          }
+          else if (line == "alpha")
+          {
+            scene >> mySphere.alpha;
+          }
 
           myScene->numSpheres++;
           if (myScene->numSpheres <= myScene->maxSpheres)
@@ -436,6 +458,8 @@ int main(int argc, char* argv[])
   // NOTE(ralntdir): generates random floats between [0, 1)
   std::uniform_real_distribution<real32> distribution(0, 1);
 
+  int32 depth = 1;
+
   // NOTE(ralntdir): From top to bottom
   for (int32 i = HEIGHT-1; i >= 0 ; i--)
   {
@@ -453,7 +477,7 @@ int main(int argc, char* argv[])
         cameraRay.origin = myScene.camera;
         cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
 
-        vec3 tempCol = color(cameraRay, &myScene, backgroundColor);
+        vec3 tempCol = color(cameraRay, &myScene, backgroundColor, depth);
         clamp(&tempCol);
         col += tempCol;
       }
