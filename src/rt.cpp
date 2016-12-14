@@ -159,17 +159,17 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, re
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  if (depth == 1)
-  {
-    result = mySphere.ka*myLight.intensity +
-             visible*mySphere.kd*myLight.intensity*dotProductLN +
-             visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
-  }
-  else if (depth > 1)
-  {
-    result = visible*mySphere.kd*myLight.intensity*dotProductLN +
-             visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
-  }
+  // if (depth == -1)
+  // {
+  //   result = mySphere.ka*myLight.intensity +
+  //            visible*mySphere.kd*myLight.intensity*dotProductLN +
+  //            visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  // }
+  // else if (depth > 1)
+  // {
+  result = visible*mySphere.kd*myLight.intensity*dotProductLN +
+           visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  // }
 
   return(result);
 }
@@ -213,6 +213,8 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
         if ((t >= 0.0) && (t < maxt))
         {
           result = {};
+          // NOTE(ralntdir): Let's suppose that ia is (1.0, 1.0, 1.0)
+          result += mySphere.ka;
           maxt = t;
           vec3 hitPoint = myRay.origin + t*myRay.direction;
 
