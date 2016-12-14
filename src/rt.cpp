@@ -133,7 +133,7 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
 
 // TODO(ralntdir): add attenuation for point lights
 // TODO(ralntdir): technically this is not Phong Shading
-vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, real32 visible)
+vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, real32 visible, int32 depth)
 {
   vec3 result;
 
@@ -159,9 +159,17 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, re
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  result = mySphere.ka*myLight.intensity +
-           visible*mySphere.kd*myLight.intensity*dotProductLN +
-           visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  if (depth == 1)
+  {
+    result = mySphere.ka*myLight.intensity +
+             visible*mySphere.kd*myLight.intensity*dotProductLN +
+             visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  }
+  else if (depth > 1)
+  {
+    result = visible*mySphere.kd*myLight.intensity*dotProductLN +
+             visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  }
 
   return(result);
 }
@@ -231,7 +239,7 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
                 }
               }
             }
-            result += phongShading(myLight, mySphere, myScene->camera, hitPoint, visible);
+            result += phongShading(myLight, mySphere, myScene->camera, hitPoint, visible, depth);
           }
 
           // Add reflection
