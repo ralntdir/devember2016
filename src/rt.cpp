@@ -502,6 +502,12 @@ int main(int argc, char* argv[])
       vec3 backgroundColor = { 0.0, ((real32)i/HEIGHT), ((real32)j/WIDTH) };
       vec3 col = {};
 
+#if 0
+      #pragma omp declare reduction(vectorReduction:vec3: \
+                                    omp_out += omp_in)
+
+      #pragma omp parallel for reduction(vectorReduction:col)
+#endif
       for (int32 samples = 0; samples < MAX_SAMPLES; samples++)
       {
         real32 u = real32(j + distribution(engine))/real32(WIDTH);

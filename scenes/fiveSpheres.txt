@@ -1,4 +1,4 @@
-# Scene for testing shadows in point lights
+# Scene for testing reflections
 camera
 0.0 0.0 0.0
 
