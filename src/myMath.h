@@ -9,6 +9,12 @@ union vec3
     real32 y;
     real32 z;
   };
+  struct
+  {
+    real32 r;
+    real32 g;
+    real32 b;
+  };
   real32 e[3];
 };
 
@@ -102,6 +108,17 @@ real32 dotProduct(vec3 vector1, vec3 vector2)
   real32 result;
 
   result = vector1.x*vector2.x + vector1.y*vector2.y + vector1.z*vector2.z;
+
+  return(result);
+}
+
+vec3 crossProduct(vec3 a, vec3 b)
+{
+  vec3 result = {};
+
+  result.x = a.y*b.z - a.z*b.y;
+  result.y = a.z*b.x - a.x*b.z;
+  result.z = a.y*b.x - a.x*b.y;
 
   return(result);
 }

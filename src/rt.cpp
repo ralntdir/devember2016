@@ -5,9 +5,6 @@
 //
 // Features to add:
 // ray->sphere intersection (check if it's completed)
-// shadows
-// reflection
-// read llc, hoffset and voffset from file
 
 // Files manipulation
 #include <iostream>
@@ -47,11 +44,8 @@ struct ray
   vec3 direction;
 };
 
-struct sphere
+struct materialParameters
 {
-  vec3 center;
-  real32 radius;
-
   vec3 ka;
   vec3 kd;
   vec3 ks;
@@ -59,6 +53,14 @@ struct sphere
   vec3 kr;
 
   real32 alpha;
+};
+
+struct sphere
+{
+  vec3 center;
+  real32 radius;
+
+  materialParameters material;
 };
 
 enum light_type
@@ -159,8 +161,8 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, re
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  result = visible*mySphere.kd*myLight.intensity*dotProductLN +
-           visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.alpha);
+  result = visible*mySphere.material.kd*myLight.intensity*dotProductLN +
+           visible*filterSpecular*mySphere.material.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.material.alpha);
 
   return(result);
 }
@@ -192,8 +194,8 @@ vec3 blinnPhongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoin
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  result = visible*mySphere.kd*myLight.intensity*dotProductLN +
-           visible*filterSpecular*mySphere.ks*myLight.intensity*pow(max(dotProduct(N, H), 0.0), mySphere.alpha);
+  result = visible*mySphere.material.kd*myLight.intensity*dotProductLN +
+           visible*filterSpecular*mySphere.material.ks*myLight.intensity*pow(max(dotProduct(N, H), 0.0), mySphere.material.alpha);
 
   return(result);
 }
@@ -226,7 +228,7 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
 
   if (depth <= MAX_DEPTH)
   {
-    real32 maxt = FLT_MAX;
+    real32 mint = FLT_MAX;
     real32 t = -1.0;
 
     for (int i = 0; i < myScene->numSpheres; i++)
@@ -234,12 +236,12 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
       sphere mySphere = myScene->spheres[i];
       if (hitSphere(mySphere, myRay, &t))
       {
-        if ((t >= 0.0) && (t < maxt))
+        if ((t >= 0.0) && (t < mint))
         {
           result = {};
           // NOTE(ralntdir): Let's suppose that ia is (1.0, 1.0, 1.0)
-          result += mySphere.ka;
-          maxt = t;
+          result += mySphere.material.ka;
+          mint = t;
           vec3 hitPoint = myRay.origin + t*myRay.direction;
 
           vec3 N = normalize(hitPoint - mySphere.center);
@@ -254,6 +256,7 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
 
             for (int k = 0; k < myScene->numSpheres; k++)
             {
+              // TODO(ralntdir): check if this filtering is right
               if (i != k)
               {
                 sphere mySphere1 = myScene->spheres[k];
@@ -273,7 +276,7 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
           reflectedRay.origin = hitPoint + N*0.01;
           reflectedRay.direction = 2*dotProduct(-myRay.direction, N)*N + myRay.direction;
 
-          result += mySphere.kr*color(reflectedRay, myScene, backgroundColor, depth+1);
+          result += mySphere.material.kr*color(reflectedRay, myScene, backgroundColor, depth+1);
         }
       }
     }
@@ -319,29 +322,29 @@ void readSceneFile(scene *myScene, char *filename)
           scene >> line; // radius
           scene >> mySphere.radius;
           scene >> line; // ka
-          scene >> mySphere.ka.x;
-          scene >> mySphere.ka.y;
-          scene >> mySphere.ka.z;
+          scene >> mySphere.material.ka.r;
+          scene >> mySphere.material.ka.g;
+          scene >> mySphere.material.ka.b;
           scene >> line; // kd
-          scene >> mySphere.kd.x;
-          scene >> mySphere.kd.y;
-          scene >> mySphere.kd.z;
+          scene >> mySphere.material.kd.r;
+          scene >> mySphere.material.kd.g;
+          scene >> mySphere.material.kd.b;
           scene >> line; // ks
-          scene >> mySphere.ks.x;
-          scene >> mySphere.ks.y;
-          scene >> mySphere.ks.z;
+          scene >> mySphere.material.ks.r;
+          scene >> mySphere.material.ks.g;
+          scene >> mySphere.material.ks.b;
           scene >> line; // kr || alpha
           if (line == "kr")
           {
-            scene >> mySphere.kr.x;
-            scene >> mySphere.kr.y;
-            scene >> mySphere.kr.z;
+            scene >> mySphere.material.kr.r;
+            scene >> mySphere.material.kr.g;
+            scene >> mySphere.material.kr.b;
             scene >> line; // alpha
-            scene >> mySphere.alpha;
+            scene >> mySphere.material.alpha;
           }
           else if (line == "alpha")
           {
-            scene >> mySphere.alpha;
+            scene >> mySphere.material.alpha;
           }
 
           myScene->numSpheres++;
@@ -359,9 +362,9 @@ void readSceneFile(scene *myScene, char *filename)
           scene >> myLight.position.y;
           scene >> myLight.position.z;
           scene >> line; // intensity
-          scene >> myLight.intensity.x;
-          scene >> myLight.intensity.y;
-          scene >> myLight.intensity.z;
+          scene >> myLight.intensity.r;
+          scene >> myLight.intensity.g;
+          scene >> myLight.intensity.b;
           scene >> line; // type
           scene >> line;
 
@@ -524,9 +527,9 @@ int main(int argc, char* argv[])
 
       col /= (real32)MAX_SAMPLES;
 
-      int32 r = int32(255.0*col.e[0]);
-      int32 g = int32(255.0*col.e[1]);
-      int32 b = int32(255.0*col.e[2]);
+      int32 r = int32(255.0*col.r);
+      int32 g = int32(255.0*col.g);
+      int32 b = int32(255.0*col.b);
 
       ofs << r << " " << g << " " << b << "\n";
     }
