@@ -61,6 +61,7 @@ enum mesh_type
 {
   sphere,
   plane,
+  triangle,
 };
 
 // NOTE(ralntdir): I don't like this aproximation to handle
@@ -74,9 +75,14 @@ struct mesh
   vec3 center;
   real32 radius;
 
-  // Infor for a plane
+  // Info for a plane
   vec3 normal;
   vec3 p0;
+
+  // Info for a triangle
+  vec3 a;
+  vec3 b;
+  vec3 c;
 
   materialParameters material;
 };
@@ -229,6 +235,35 @@ bool hitMesh(mesh myMesh, ray myRay, real32 *t)
   else if (myMesh.type == plane)
   {
     result = hitPlane(myMesh, myRay, t);
+
+// NOTE(ralntdir): This works only for a plane where
+// one of the coordinates is fixed (a "2D" plane), not
+// one where the 3 coordinates vary in the 3D space.
+#if 0
+    vec3 hitPoint = myRay.origin + *t*myRay.direction;
+
+    if ((hitPoint.x < myMesh.p0.x - 1) || (hitPoint.x > myMesh.p0.x + 2) ||
+        (hitPoint.y < myMesh.p0.y - 2) || (hitPoint.y > myMesh.p0.y + 1))
+    {
+      result = false;
+    }
+#endif
+  }
+  else if (myMesh.type == triangle)
+  {
+    vec3 ab = myMesh.a - myMesh.b;
+    vec3 ac = myMesh.a - myMesh.c;
+    vec3 planeNormal = crossProduct(ab, ac);
+    mesh plane = {};
+    plane.normal = planeNormal;
+    plane.p0 = myMesh.a;
+    result = hitPlane(myMesh, myRay, t);
+
+    if (result == true)
+    {
+      // TODO(ralntdir): Check if the point is inside the triangle
+      // using barycentric coordinates (?)
+    }
   }
 
   return(result);
