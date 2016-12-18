@@ -4,7 +4,9 @@
 // when creating the window or the renderer
 //
 // Features to add:
-// ray->sphere intersection (check if it's completed)
+// ray->sphere intersection (check if it's completed) -> I think so!
+// Move width and height to scene?
+// Move max_depth to scene?
 
 // Files manipulation
 #include <iostream>
@@ -55,10 +57,26 @@ struct materialParameters
   real32 alpha;
 };
 
-struct sphere
+enum mesh_type
 {
+  sphere,
+  plane,
+};
+
+// NOTE(ralntdir): I don't like this aproximation to handle
+// more than one type of mesh, but I also don't want to use
+// OOP, so I'll go with this for now.
+struct mesh
+{
+  mesh_type type;
+
+  // Info for a sphere
   vec3 center;
   real32 radius;
+
+  // Infor for a plane
+  vec3 normal;
+  vec3 p0;
 
   materialParameters material;
 };
@@ -84,16 +102,16 @@ struct scene
   vec3 lr;
   vec3 ll;
 
-  int32 maxSpheres = 8;
+  int32 maxMeshes = 8;
   int32 maxLights = 2;
 
-  int32 numSpheres;
+  int32 numMeshes;
   int32 numLights;
   light lights[2];
-  sphere spheres[8];
+  mesh meshes[8];
 };
 
-bool hitSphere(sphere mySphere, ray myRay, real32 *t)
+bool hitSphere(mesh mySphere, ray myRay, real32 *t)
 {
   bool result = false;
 
@@ -133,15 +151,48 @@ bool hitSphere(sphere mySphere, ray myRay, real32 *t)
   return(result);
 }
 
+bool hitPlane(mesh myPlane, ray myRay, real32 *t)
+{
+  bool result = false;
+
+  vec3 A = myRay.origin - myPlane.p0;
+  real32 dotProductNDirection = dotProduct(myPlane.normal, myRay.direction);
+  real32 dotProductNA = dotProduct(myPlane.normal, A);
+
+  real32 tHit = -1.0;
+
+  if (dotProductNDirection != 0.0)
+  {
+    tHit = -dotProductNA/dotProductNDirection;
+  }
+
+  if (tHit > 0.0)
+  {
+    *t = tHit;
+    result = true;
+  }
+
+  return(result);
+}
+
 // TODO(ralntdir): add attenuation for point lights
 // TODO(ralntdir): technically this is not Phong Shading
-vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, real32 visible)
+vec3 phongShading(light myLight, mesh myMesh, vec3 camera, vec3 hitPoint, real32 visible)
 {
   vec3 result;
 
   // *N vector (normal at hit point)
   // *L vector (lightPosition - hitPoint)
-  vec3 N = normalize(hitPoint - mySphere.center);
+  vec3 N = {};
+  if (myMesh.type == sphere)
+  {
+    N = normalize(hitPoint - myMesh.center);
+  }
+  else if (myMesh.type == plane)
+  {
+    N = normalize(myMesh.normal);
+  }
+
   vec3 L = {};
   if (myLight.type == point)
   {
@@ -161,13 +212,30 @@ vec3 phongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, re
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  result = visible*mySphere.material.kd*myLight.intensity*dotProductLN +
-           visible*filterSpecular*mySphere.material.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), mySphere.material.alpha);
+  result = visible*myMesh.material.kd*myLight.intensity*dotProductLN +
+           visible*filterSpecular*myMesh.material.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), myMesh.material.alpha);
 
   return(result);
 }
 
-vec3 blinnPhongShading(light myLight, sphere mySphere, vec3 camera, vec3 hitPoint, real32 visible)
+bool hitMesh(mesh myMesh, ray myRay, real32 *t)
+{
+  bool result = false;
+
+  if (myMesh.type == sphere)
+  {
+    result = hitSphere(myMesh, myRay, t);
+  }
+  else if (myMesh.type == plane)
+  {
+    result = hitPlane(myMesh, myRay, t);
+  }
+
+  return(result);
+}
+
+
+vec3 blinnPhongShading(light myLight, mesh mySphere, vec3 camera, vec3 hitPoint, real32 visible)
 {
   vec3 result;
 
@@ -231,20 +299,20 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
     real32 mint = FLT_MAX;
     real32 t = -1.0;
 
-    for (int i = 0; i < myScene->numSpheres; i++)
+    for (int i = 0; i < myScene->numMeshes; i++)
     {
-      sphere mySphere = myScene->spheres[i];
-      if (hitSphere(mySphere, myRay, &t))
+      mesh myMesh = myScene->meshes[i];
+      if (hitMesh(myMesh, myRay, &t))
       {
         if ((t >= 0.0) && (t < mint))
         {
           result = {};
           // NOTE(ralntdir): Let's suppose that ia is (1.0, 1.0, 1.0)
-          result += mySphere.material.ka;
+          result += myMesh.material.ka;
           mint = t;
           vec3 hitPoint = myRay.origin + t*myRay.direction;
 
-          vec3 N = normalize(hitPoint - mySphere.center);
+          vec3 N = normalize(hitPoint - myMesh.center);
 
           for (int j = 0; j < myScene->numLights; j++)
           {
@@ -254,21 +322,21 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
 
             real32 visible = 1.0;
 
-            for (int k = 0; k < myScene->numSpheres; k++)
+            for (int k = 0; k < myScene->numMeshes; k++)
             {
               // TODO(ralntdir): check if this filtering is right
               if (i != k)
               {
-                sphere mySphere1 = myScene->spheres[k];
+                mesh myMesh1 = myScene->meshes[k];
                 real32 t1 = -1.0;
-                if (hitSphere(mySphere1, shadowRay, &t1))
+                if (hitMesh(myMesh1, shadowRay, &t1))
                 {
                   visible = 0.0;
                   break;
                 }
               }
             }
-            result += phongShading(myLight, mySphere, myScene->camera, hitPoint, visible);
+            result += phongShading(myLight, myMesh, myScene->camera, hitPoint, visible);
           }
 
           // Add reflection
@@ -276,7 +344,7 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
           reflectedRay.origin = hitPoint + N*0.01;
           reflectedRay.direction = 2*dotProduct(-myRay.direction, N)*N + myRay.direction;
 
-          result += mySphere.material.kr*color(reflectedRay, myScene, backgroundColor, depth+1);
+          result += myMesh.material.kr*color(reflectedRay, myScene, backgroundColor, depth+1);
         }
       }
     }
@@ -313,7 +381,8 @@ void readSceneFile(scene *myScene, char *filename)
         }
         else if (line == "sphere")
         {
-          sphere mySphere = {};
+          mesh mySphere = {};
+          mySphere.type = sphere;
 
           scene >> line; // center
           scene >> mySphere.center.x;
@@ -347,10 +416,55 @@ void readSceneFile(scene *myScene, char *filename)
             scene >> mySphere.material.alpha;
           }
 
-          myScene->numSpheres++;
-          if (myScene->numSpheres <= myScene->maxSpheres)
+          myScene->numMeshes++;
+          if (myScene->numMeshes <= myScene->maxMeshes)
           {
-            myScene->spheres[myScene->numSpheres-1] = mySphere;
+            myScene->meshes[myScene->numMeshes-1] = mySphere;
+          }
+        }
+        else if (line == "plane")
+        {
+          mesh myPlane = {};
+          myPlane.type = plane;
+
+          scene >> line; // normal
+          scene >> myPlane.normal.x;
+          scene >> myPlane.normal.y;
+          scene >> myPlane.normal.z;
+          scene >> line; // p0
+          scene >> myPlane.p0.x;
+          scene >> myPlane.p0.y;
+          scene >> myPlane.p0.z;
+          scene >> line; // ka
+          scene >> myPlane.material.ka.r;
+          scene >> myPlane.material.ka.g;
+          scene >> myPlane.material.ka.b;
+          scene >> line; // kd
+          scene >> myPlane.material.kd.r;
+          scene >> myPlane.material.kd.g;
+          scene >> myPlane.material.kd.b;
+          scene >> line; // ks
+          scene >> myPlane.material.ks.r;
+          scene >> myPlane.material.ks.g;
+          scene >> myPlane.material.ks.b;
+          scene >> line; // kr || alpha
+          if (line == "kr")
+          {
+            scene >> myPlane.material.kr.r;
+            scene >> myPlane.material.kr.g;
+            scene >> myPlane.material.kr.b;
+            scene >> line; // alpha
+            scene >> myPlane.material.alpha;
+          }
+          else if (line == "alpha")
+          {
+            scene >> myPlane.material.alpha;
+          }
+
+          myScene->numMeshes++;
+          if (myScene->numMeshes <= myScene->maxMeshes)
+          {
+            myScene->meshes[myScene->numMeshes-1] = myPlane;
           }
         }
         else if (line == "light")
