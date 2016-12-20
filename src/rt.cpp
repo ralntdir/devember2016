@@ -263,6 +263,35 @@ bool hitMesh(mesh myMesh, ray myRay, real32 *t)
     {
       // TODO(ralntdir): Check if the point is inside the triangle
       // using barycentric coordinates (?)
+
+      // Using barycentric coordinates...
+      // We know that the hit point is defined with the following equation
+      // P = wA + uB + vC;
+      // and that w = 1 - u - v
+      // So P can be put in the following way
+      // P = A - uA - vA + uB + vC
+      // or
+      // P = A + u(B - A) + v(C - B); (I)
+
+      // Using the ray equation
+      // We also know that the hit point is defined with the following equation
+      // P = O + tD; (II)
+
+      // If we substitute (II) into (I) we get
+      // O + tD = A + u(B - A) + v(C - B)
+      // and rearranging it we get
+      // O - A = -tD + u(B - A) + v(C - B) (III)
+
+      //                         [ t
+      // [ -D, B - A , C - B ] *   u   = O - A
+      //                           v ]
+
+      // Using Cramer's rule and the determinants, we can get the values for
+      // u, v and t, and check if we have hit the triangle based in the
+      // sign of those values
+
+      // Think how to apply the Cramer's rule and how to calculate the
+      // determinants.
     }
   }
 
