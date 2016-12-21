@@ -253,14 +253,17 @@ bool hitMesh(mesh myMesh, ray myRay, real32 *t)
   {
     vec3 ab = myMesh.a - myMesh.b;
     vec3 ac = myMesh.a - myMesh.c;
-    vec3 planeNormal = crossProduct(ab, ac);
+    vec3 planeNormal = normalize(crossProduct(ab, ac));
+    // printVector(planeNormal);
     mesh plane = {};
     plane.normal = planeNormal;
     plane.p0 = myMesh.a;
-    result = hitPlane(myMesh, myRay, t);
+    result = hitPlane(plane, myRay, t);
 
     if (result == true)
     {
+      // std::cout << "Result True\n";
+
       // TODO(ralntdir): Check if the point is inside the triangle
       // using barycentric coordinates (?)
 
@@ -292,6 +295,38 @@ bool hitMesh(mesh myMesh, ray myRay, real32 *t)
 
       // Think how to apply the Cramer's rule and how to calculate the
       // determinants.
+      vec3 E1 = myMesh.b - myMesh.a;
+      vec3 E2 = myMesh.c - myMesh.a;
+      vec3 T = myRay.origin - myMesh.a;
+      vec3 minusD = -myRay.direction;
+
+      real32 invDetM = 1.0 / scalarTripleProduct(minusD, E1, E2);
+
+      real32 detM2 = scalarTripleProduct(minusD, T, E2);
+      real32 u = detM2*invDetM;
+
+      if (u < 0.0 || u > 1)
+      {
+        result = false;
+      }
+      else
+      {
+        real32 detM3 = scalarTripleProduct(minusD, E1, T);
+
+        real32 v = detM3*invDetM;
+
+        if (v < 0.0 ||  u + v > 1.0)
+        {
+          result = false;
+        }
+        else
+        {
+          real32 detM1 = scalarTripleProduct(T, E1, E2);
+          *t = detM1*invDetM;
+
+          result = true;
+        }
+      }
     }
   }
 
@@ -529,6 +564,55 @@ void readSceneFile(scene *myScene, char *filename)
           if (myScene->numMeshes <= myScene->maxMeshes)
           {
             myScene->meshes[myScene->numMeshes-1] = myPlane;
+          }
+        }
+        else if (line == "triangle")
+        {
+          mesh myTriangle = {};
+          myTriangle.type = triangle;
+
+          scene >> line; // a
+          scene >> myTriangle.a.x;
+          scene >> myTriangle.a.y;
+          scene >> myTriangle.a.z;
+          scene >> line; // b
+          scene >> myTriangle.b.x;
+          scene >> myTriangle.b.y;
+          scene >> myTriangle.b.z;
+          scene >> line; // c
+          scene >> myTriangle.c.x;
+          scene >> myTriangle.c.y;
+          scene >> myTriangle.c.z;
+          scene >> line; // ka
+          scene >> myTriangle.material.ka.r;
+          scene >> myTriangle.material.ka.g;
+          scene >> myTriangle.material.ka.b;
+          scene >> line; // kd
+          scene >> myTriangle.material.kd.r;
+          scene >> myTriangle.material.kd.g;
+          scene >> myTriangle.material.kd.b;
+          scene >> line; // ks
+          scene >> myTriangle.material.ks.r;
+          scene >> myTriangle.material.ks.g;
+          scene >> myTriangle.material.ks.b;
+          scene >> line; // kr || alpha
+          if (line == "kr")
+          {
+            scene >> myTriangle.material.kr.r;
+            scene >> myTriangle.material.kr.g;
+            scene >> myTriangle.material.kr.b;
+            scene >> line; // alpha
+            scene >> myTriangle.material.alpha;
+          }
+          else if (line == "alpha")
+          {
+            scene >> myTriangle.material.alpha;
+          }
+
+          myScene->numMeshes++;
+          if (myScene->numMeshes <= myScene->maxMeshes)
+          {
+            myScene->meshes[myScene->numMeshes-1] = myTriangle;
           }
         }
         else if (line == "light")

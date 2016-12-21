@@ -5,4 +5,6 @@ My Devember project!
 Goals:
 
 [X] Add one sphere
-[] Add spheres
+[X] Add spheres
+[X] Add multiple lights
+[X] Add reflection

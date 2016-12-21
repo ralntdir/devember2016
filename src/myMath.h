@@ -123,6 +123,17 @@ vec3 crossProduct(vec3 a, vec3 b)
   return(result);
 }
 
+real32 scalarTripleProduct(vec3 a, vec3 b, vec3 c)
+{
+  real32 result;
+
+  vec3 axb = crossProduct(a, b);
+
+  result = dotProduct(axb, c);
+
+  return(result);
+}
+
 void printVector(vec3 vector)
 {
   std::cout << "x: " << vector.x << ", y: " << vector.y << ", z:" << vector.z << "\n";
