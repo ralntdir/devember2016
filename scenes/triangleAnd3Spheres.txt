@@ -1,0 +1,88 @@
+#Comment
+camera
+0.0 0.0 0.0
+
+ul
+-1.0  1.0 -3.0
+ur
+ 1.0  1.0 -3.0
+lr
+ 1.0 -1.0 -3.0
+ll
+-1.0 -1.0 -3.0
+
+sphere
+center
+0.0 0.0 -20.0
+radius
+3.0
+ka
+0.1 0.1 0.1
+kd
+1.0 0.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+50.0
+
+sphere
+center
+-2.0 2.0 -15.0
+radius
+1.0
+ka
+0.1 0.1 0.1
+kd
+1.0 1.0 0.0
+ks
+1.0 1.0 1.0
+alpha
+50.0
+
+sphere
+center
+-2.0 -2.0 -15.0
+radius
+1.0
+ka
+0.1 0.1 0.1
+kd
+0.0 1.0 1.0
+ks
+1.0 1.0 1.0
+alpha
+50.0
+
+triangle
+a
+5.0 5.0 -17.0
+b
+1.0 4.0 -20.0
+c
+6.0 -1.0 -20.0
+ka
+0.1 0.1 0.1
+kd
+0.1 0.1 0.1 
+ks
+1.0 1.0 1.0
+kr
+1.0 1.0 1.0
+alpha
+50.0
+
+light
+position
+0.57735027 -0.57735027 -0.57735027
+intensity
+1.0 1.0 1.0 
+type
+directional
+
+light
+position
+0.57735027 0.57735027 -0.57735027 
+intensity
+0.0 0.0 1.0 
+type
+directional

@@ -198,6 +198,12 @@ vec3 phongShading(light myLight, mesh myMesh, vec3 camera, vec3 hitPoint, real32
   {
     N = normalize(myMesh.normal);
   }
+  else if (myMesh.type == triangle)
+  {
+    vec3 ab = myMesh.a - myMesh.b;
+    vec3 ac = myMesh.a - myMesh.c;
+    N = normalize(crossProduct(ab, ac));
+  }
 
   vec3 L = {};
   if (myLight.type == point)
@@ -407,11 +413,29 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
         {
           result = {};
           // NOTE(ralntdir): Let's suppose that ia is (1.0, 1.0, 1.0)
-          result += myMesh.material.ka;
+          if (depth == 1)
+          {
+            result += myMesh.material.ka;
+          }
           mint = t;
           vec3 hitPoint = myRay.origin + t*myRay.direction;
 
-          vec3 N = normalize(hitPoint - myMesh.center);
+          vec3 N = {};
+
+          if (myMesh.type == sphere)
+          {
+            N = normalize(hitPoint - myMesh.center);
+          }
+          else if (myMesh.type == plane)
+          {
+            N = normalize(myMesh.normal);
+          }
+          else if (myMesh.type == triangle)
+          {
+            vec3 ab = myMesh.a - myMesh.b;
+            vec3 ac = myMesh.a - myMesh.c;
+            N = normalize(crossProduct(ab, ac));
+          }
 
           for (int j = 0; j < myScene->numLights; j++)
           {
