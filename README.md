@@ -8,3 +8,4 @@ Goals:
 [X] Add spheres
 [X] Add multiple lights
 [X] Add reflection
+[X] Add triangles
