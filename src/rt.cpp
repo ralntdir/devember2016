@@ -196,13 +196,11 @@ vec3 phongShading(light myLight, mesh myMesh, vec3 camera, vec3 hitPoint, real32
   }
   else if (myMesh.type == plane)
   {
-    N = normalize(myMesh.normal);
+    N = myMesh.normal;
   }
   else if (myMesh.type == triangle)
   {
-    vec3 ab = myMesh.a - myMesh.b;
-    vec3 ac = myMesh.a - myMesh.c;
-    N = normalize(crossProduct(ab, ac));
+    N = myMesh.normal;
   }
 
   vec3 L = {};
@@ -224,7 +222,7 @@ vec3 phongShading(light myLight, mesh myMesh, vec3 camera, vec3 hitPoint, real32
 
   // Only add specular component if you have diffuse,
   // if dotProductLN > 0.0
-  result = visible*myMesh.material.kd*myLight.intensity*dotProductLN +
+  result = 1.0*visible*myMesh.material.kd*myLight.intensity*dotProductLN +
            visible*filterSpecular*myMesh.material.ks*myLight.intensity*pow(max(dotProduct(R, V), 0.0), myMesh.material.alpha);
 
   return(result);
@@ -428,13 +426,11 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
           }
           else if (myMesh.type == plane)
           {
-            N = normalize(myMesh.normal);
+            N = myMesh.normal;
           }
           else if (myMesh.type == triangle)
           {
-            vec3 ab = myMesh.a - myMesh.b;
-            vec3 ac = myMesh.a - myMesh.c;
-            N = normalize(crossProduct(ab, ac));
+            N = myMesh.normal;
           }
 
           for (int j = 0; j < myScene->numLights; j++)
@@ -465,7 +461,8 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
           // Add reflection
           ray reflectedRay = {};
           reflectedRay.origin = hitPoint + N*0.01;
-          reflectedRay.direction = 2*dotProduct(-myRay.direction, N)*N + myRay.direction;
+          reflectedRay.direction = normalize(2*dotProduct(-myRay.direction, N)*N + myRay.direction);
+          // reflectedRay.direction = 2*dotProduct(-myRay.direction, N)*N + myRay.direction;
 
           result += myMesh.material.kr*color(reflectedRay, myScene, backgroundColor, depth+1);
         }
@@ -554,6 +551,7 @@ void readSceneFile(scene *myScene, char *filename)
           scene >> myPlane.normal.x;
           scene >> myPlane.normal.y;
           scene >> myPlane.normal.z;
+          myPlane.normal = normalize(myPlane.normal);
           scene >> line; // p0
           scene >> myPlane.p0.x;
           scene >> myPlane.p0.y;
@@ -607,6 +605,11 @@ void readSceneFile(scene *myScene, char *filename)
           scene >> myTriangle.c.x;
           scene >> myTriangle.c.y;
           scene >> myTriangle.c.z;
+
+          vec3 ab = myTriangle.a - myTriangle.b;
+          vec3 ac = myTriangle.a - myTriangle.c;
+          myTriangle.normal = normalize(crossProduct(ab, ac));
+
           scene >> line; // ka
           scene >> myTriangle.material.ka.r;
           scene >> myTriangle.material.ka.g;
@@ -804,7 +807,7 @@ int main(int argc, char* argv[])
 
         ray cameraRay = {};
         cameraRay.origin = myScene.camera;
-        cameraRay.direction = lowerLeftCorner + u*horizontalOffset + v*verticalOffset;
+        cameraRay.direction = normalize(lowerLeftCorner + u*horizontalOffset + v*verticalOffset);
 
         vec3 tempCol = color(cameraRay, &myScene, backgroundColor, depth);
         clamp(&tempCol);
