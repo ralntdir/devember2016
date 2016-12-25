@@ -182,8 +182,7 @@ bool hitPlane(mesh myPlane, ray myRay, real32 *t)
 }
 
 // TODO(ralntdir): add attenuation for point lights
-// TODO(ralntdir): technically this is not Phong Shading
-vec3 phongShading(light myLight, mesh myMesh, vec3 camera, vec3 hitPoint, real32 visible)
+vec3 phongIllumination(light myLight, mesh myMesh, vec3 camera, vec3 hitPoint, real32 visible)
 {
   vec3 result;
 
@@ -376,7 +375,8 @@ ray getShadowRay(light myLight, vec3 hitPoint, vec3 normalAtHitPoint)
   ray result = {};
 
   // NOTE(ralntdir): delta to avoid shadow acne.
-  real32 bias = 0.01;
+  real32 bias = 0.00;
+  // real32 bias = 0.01;
 
   result.origin = hitPoint + normalAtHitPoint*bias;
 
@@ -433,6 +433,8 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
             N = myMesh.normal;
           }
 
+          hitPoint += 0.01*N;
+
           for (int j = 0; j < myScene->numLights; j++)
           {
             light myLight = myScene->lights[j];
@@ -455,7 +457,7 @@ vec3 color(ray myRay, scene *myScene, vec3 backgroundColor, int32 depth)
                 }
               }
             }
-            result += phongShading(myLight, myMesh, myScene->camera, hitPoint, visible);
+            result += phongIllumination(myLight, myMesh, myScene->camera, hitPoint, visible);
           }
 
           // Add reflection
